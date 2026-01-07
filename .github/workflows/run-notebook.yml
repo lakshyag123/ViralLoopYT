@@ -26,7 +26,7 @@ jobs:
     - name: Execute notebook
       env: ${{ secrets }}
       run: |
-        papermill your-notebook.ipynb output-notebook.ipynb
+        papermill ViralLoopYT.ipynb output-notebook.ipynb
     
     - name: Upload results
       uses: actions/upload-artifact@v4
