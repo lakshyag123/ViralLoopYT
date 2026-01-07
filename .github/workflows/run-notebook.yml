@@ -22,10 +22,11 @@ jobs:
       run: |
         pip install papermill nbconvert jupyter
         # pip install -r requirements.txt  # uncomment if you have one
-    
+
     - name: Execute notebook
+      env: ${{ secrets }}
       run: |
-        papermill ViralLoopYT.ipynb output-notebook.ipynb
+        papermill your-notebook.ipynb output-notebook.ipynb
     
     - name: Upload results
       uses: actions/upload-artifact@v4
