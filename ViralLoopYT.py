@@ -160,10 +160,10 @@ print("HF_TOKEN prefix:", HF_TOKEN[:6] + "..." if HF_TOKEN else "None")
 # 🤖 HUGGINGFACE SCRIPT GENERATION
 # =========================================================
 
-MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.2"
+MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.3"
 
 # Initialize the client with the model
-client = InferenceClient(model=MODEL_ID, api_key=HF_TOKEN, provider="hf-inference")
+client = InferenceClient(model=MODEL_ID, api_key=HF_TOKEN)
 
 def generate_script_hf(insta_caption):
     try:
