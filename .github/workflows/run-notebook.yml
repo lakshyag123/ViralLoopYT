@@ -1,0 +1,34 @@
+name: Run Colab Notebook
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  run-notebook:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        pip install papermill nbconvert jupyter
+        pip install -r requirements.txt  # if you have one
+    
+    - name: Execute notebook
+      run: |
+        papermill your-notebook.ipynb output-notebook.ipynb
+    
+    - name: Upload results
+      uses: actions/upload-artifact@v3
+      with:
+        name: notebook-results
+        path: output-notebook.ipynb
