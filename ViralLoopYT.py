@@ -163,7 +163,7 @@ print("HF_TOKEN prefix:", HF_TOKEN[:6] + "..." if HF_TOKEN else "None")
 MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.2"
 
 # Initialize the client with the model
-client = InferenceClient(model=MODEL_ID, api_key=HF_TOKEN)
+client = InferenceClient(model=MODEL_ID, api_key=HF_TOKEN, provider="hf-inference")
 
 def generate_script_hf(insta_caption):
     try:
