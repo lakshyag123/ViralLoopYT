@@ -146,6 +146,8 @@ def download_one_reel():
 VIDEO_FILE, SOURCE_PAGE, DURATION = download_one_reel()
 print("Downloaded:", VIDEO_FILE, "Duration:", DURATION)
 
+print(HF_TOKEN)
+
 
 # =========================================================
 # 🤖 HUGGINGFACE SCRIPT GENERATION
