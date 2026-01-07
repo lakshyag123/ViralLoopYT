@@ -164,7 +164,7 @@ MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.2"
 
 client = InferenceClient(
     model=MODEL_ID,
-    api_key=HF_TOKEN,   # must be valid (paid endpoint or allowed model)
+    token=HF_TOKEN,   # must be valid (paid endpoint or allowed model)
 )
 
 def generate_script_hf(insta_caption):
