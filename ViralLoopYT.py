@@ -153,44 +153,49 @@ print("Downloaded:", VIDEO_FILE, "Duration:", DURATION)
 
 MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.2"
 
-hf_client = InferenceClient(
+client = InferenceClient(
     model=MODEL_ID,
-    api_key=HF_TOKEN
+    api_key=HF_TOKEN,   # must be valid (paid endpoint or allowed model)
 )
-
 
 def generate_script_hf(insta_caption):
     try:
-        completion = hf_client.chat.completions.create(
-            messages=[{
-                "role": "user",
-                "content": (
-                    "Create a viral video hook and short spoken script.\n\n"
-                    f"Instagram caption:\n\"{insta_caption}\"\n\n"
-                    "Rules:\n"
-                    "- Hook: max 6 words\n"
-                    "- Script: max 30 words\n"
-                    "- Simple English\n"
-                    "- No emojis\n\n"
-                    "Return ONLY:\nHook: ...\nScript: ..."
-                )
-            }],
+        completion = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        "Create a viral video hook and short spoken script.\n\n"
+                        f"Instagram caption:\n\"{insta_caption}\"\n\n"
+                        "Rules:\n"
+                        "- Hook: max 6 words\n"
+                        "- Script: max 30 words\n"
+                        "- Simple spoken English\n"
+                        "- No emojis, no hashtags, no brand promotions\n\n"
+                        "Return ONLY in this format:\n"
+                        "Hook: ...\n"
+                        "Script: ..."
+                    )
+                }
+            ],
             max_tokens=120,
-            temperature=0.7
+            temperature=0.7,
         )
 
         text = completion.choices[0].message.content
-        hook = re.search(r"Hook:(.*?)Script:", text, re.S | re.I)
-        script = re.search(r"Script:(.*)", text, re.S | re.I)
 
-        return (
-            hook.group(1).strip() if hook else "Check this out",
-            script.group(1).strip() if script else "This clip surprised everyone."
-        )
+        hook_part = re.search(r"Hook:(.*?)Script:", text, re.S | re.I)
+        script_part = re.search(r"Script:(.*)", text, re.S | re.I)
+
+        hook = hook_part.group(1).strip() if hook_part else "Check this out"
+        script = script_part.group(1).strip() if script_part else "This clip surprised everyone watching."
+
+        print("✅ HF Chat Completion API called successfully")
+        return hook[:50], script[:120]
 
     except Exception as e:
-        print("HF Error:", e)
-        return "Check this out", "This clip surprised everyone."
+        print(f"⚠️ HF API error: {e}")
+        return "Check this out", "This clip surprised everyone watching."
 
 
 # =========================================================
