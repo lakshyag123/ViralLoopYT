@@ -146,7 +146,14 @@ def download_one_reel():
 VIDEO_FILE, SOURCE_PAGE, DURATION = download_one_reel()
 print("Downloaded:", VIDEO_FILE, "Duration:", DURATION)
 
-print(HF_TOKEN)
+import os
+
+HF_TOKEN = os.getenv("HF_TOKEN")
+
+print("HF_TOKEN exists:", HF_TOKEN is not None)
+print("HF_TOKEN length:", len(HF_TOKEN) if HF_TOKEN else 0)
+print("HF_TOKEN prefix:", HF_TOKEN[:6] + "..." if HF_TOKEN else "None")
+
 
 
 # =========================================================
