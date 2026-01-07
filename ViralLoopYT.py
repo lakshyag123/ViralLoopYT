@@ -160,38 +160,44 @@ print("HF_TOKEN prefix:", HF_TOKEN[:6] + "..." if HF_TOKEN else "None")
 # 🤖 HUGGINGFACE SCRIPT GENERATION
 # =========================================================
 
-MODEL_ID = "microsoft/Phi-3-mini-4k-instruct"
+MODEL_ID = "HuggingFaceH4/zephyr-7b-beta"
 
-client = InferenceClient(
-    model=MODEL_ID,
-    token=HF_TOKEN,   # must be valid (paid endpoint or allowed model)
-)
+# Get token from environment variable (works in both Colab and GitHub)
+try:
+    from google.colab import userdata
+    HF_TOKEN = userdata.get("HF_TOKEN")
+    print("Running in Colab")
+except ImportError:
+    HF_TOKEN = os.environ.get("HF_TOKEN")
+    print("Running in GitHub Actions or local environment")
+
+# Initialize client (no model parameter needed for text_generation)
+client = InferenceClient(token=HF_TOKEN)
 
 def generate_script_hf(insta_caption):
     try:
-        completion = client.chat.completions.create(
-            messages=[
-                {
-                    "role": "user",
-                    "content": (
-                        "Create a viral video hook and short spoken script.\n\n"
-                        f"Instagram caption:\n\"{insta_caption}\"\n\n"
-                        "Rules:\n"
-                        "- Hook: max 6 words\n"
-                        "- Script: max 30 words\n"
-                        "- Simple spoken English\n"
-                        "- No emojis, no hashtags, no brand promotions\n\n"
-                        "Return ONLY in this format:\n"
-                        "Hook: ...\n"
-                        "Script: ..."
-                    )
-                }
-            ],
-            max_tokens=120,
-            temperature=0.7,
+        # Use text_generation instead of chat.completions
+        prompt = (
+            "Create a viral video hook and short spoken script.\n\n"
+            f"Instagram caption:\n\"{insta_caption}\"\n\n"
+            "Rules:\n"
+            "- Hook: max 6 words\n"
+            "- Script: max 30 words\n"
+            "- Simple spoken English\n"
+            "- No emojis, no hashtags, no brand promotions\n\n"
+            "Return ONLY in this format:\n"
+            "Hook: ...\n"
+            "Script: ..."
         )
-
-        text = completion.choices[0].message.content
+        
+        # This works with free inference API
+        text = client.text_generation(
+            prompt,
+            model=MODEL_ID,
+            max_new_tokens=120,
+            temperature=0.7,
+            return_full_text=False
+        )
 
         hook_part = re.search(r"Hook:(.*?)Script:", text, re.S | re.I)
         script_part = re.search(r"Script:(.*)", text, re.S | re.I)
@@ -205,6 +211,13 @@ def generate_script_hf(insta_caption):
     except Exception as e:
         print(f"⚠️ HF API error: {e}")
         return "Check this out", "This clip surprised everyone watching."
+
+# Test the function
+if __name__ == "__main__":
+    test_caption = "Just launched my new product! It's going to change everything 🚀"
+    hook, script = generate_script_hf(test_caption)
+    print(f"\nHook: {hook}")
+    print(f"Script: {script}")
 
 
 # =========================================================
