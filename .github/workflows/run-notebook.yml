@@ -25,8 +25,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install papermill nbconvert jupyter
-          # pip install -r requirements.txt
+          pip install -r requirements.txt
 
       - name: Execute notebook
         env: ${{ secrets }}
