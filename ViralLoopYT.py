@@ -211,6 +211,11 @@ def generate_script_hf(insta_caption):
 # 🎬 VOICE + VIDEO MERGE
 # =========================================================
 
+print("🎬 Merging Voice and Video (HF-powered)...")
+
+WATERMARK = "🍫"
+
+# 1. Locate caption file
 def find_latest_caption():
     captions = [
         os.path.join("reels", f)
@@ -221,30 +226,43 @@ def find_latest_caption():
 
 
 caption_file = find_latest_caption()
-if caption_file:
+
+if caption_file and os.path.exists(caption_file):
     with open(caption_file, "r", encoding="utf-8") as f:
-        caption_text = f.read().strip()
+        actual_caption = f.read().strip()
 else:
-    caption_text = "Check out this amazing moment!"
+    actual_caption = "Check out this amazing satisfying moment!"
 
-_, SCRIPT = generate_script_hf(caption_text)
+# 2. Generate script
+_, SCRIPT = generate_script_hf(actual_caption)
 
+# 3. Generate voice
 gTTS(text=SCRIPT, lang="en").save("voice.mp3")
 
+# 4. Merge voice + video + TRANSPARENT EMOJI WATERMARK
 subprocess.run([
     "ffmpeg", "-y",
     "-i", VIDEO_FILE,
     "-i", "voice.mp3",
     "-filter_complex",
-    "[0:a]volume=0.3[a0];[1:a]volume=2.0[a1];[a0][a1]amix=inputs=2[outa];"
-    "[0:v]drawtext=text='🍫':fontfile=/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf:"
-    "fontsize=38:fontcolor=white@0.55:x=w-tw-30:y=h-th-30[outv]",
+    # Audio mix
+    "[0:a]volume=0.3[a_orig];"
+    "[1:a]volume=2.0[a_voice];"
+    "[a_orig][a_voice]amix=inputs=2:duration=first[outa];"
+    # Bottom-right transparent watermark with emoji
+    f"[0:v]drawtext=text='{WATERMARK}':"
+    "fontfile=/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf:"
+    "fontsize=38:"
+    "fontcolor=white@0.55:"
+    "x=w-tw-30:y=h-th-30[outv]",
     "-map", "[outv]",
     "-map", "[outa]",
     "-c:v", "libx264",
     "-preset", "ultrafast",
     "final_short.mp4"
 ])
+
+print("\n🏆 SUCCESS: final_short.mp4 generated with transparent emoji watermark.")
 
 
 # =========================================================
