@@ -162,43 +162,42 @@ print("HF_TOKEN prefix:", HF_TOKEN[:6] + "..." if HF_TOKEN else "None")
 
 MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.2"
 
-client = InferenceClient(
-    api_key=HF_TOKEN  # The model is now passed in the chat call or here
-)
+# Initialize the client with the model
+client = InferenceClient(model=MODEL_ID, api_key=HF_TOKEN)
 
 def generate_script_hf(insta_caption):
     try:
-        completion = client.chat.completions.create(
-            messages=[
-                {
-                    "role": "user",
-                    "content": (
-                        "Create a viral video hook and short spoken script.\n\n"
-                        f"Instagram caption:\n\"{insta_caption}\"\n\n"
-                        "Rules:\n"
-                        "- Hook: max 6 words\n"
-                        "- Script: max 30 words\n"
-                        "- Simple spoken English\n"
-                        "- No emojis, no hashtags, no brand promotions\n\n"
-                        "Return ONLY in this format:\n"
-                        "Hook: ...\n"
-                        "Script: ..."
-                    )
-                }
-            ],
-            max_tokens=120,
-            temperature=0.7,
+        # Mistral v0.2 requires this specific prompt format to work correctly
+        prompt = (
+            f"<s>[INST] Create a viral video hook and short spoken script.\n\n"
+            f"Instagram caption: \"{insta_caption}\"\n\n"
+            "Rules:\n"
+            "- Hook: max 6 words\n"
+            "- Script: max 30 words\n"
+            "- No emojis, no hashtags\n"
+            "Return ONLY in this format:\n"
+            "Hook: ...\n"
+            "Script: ... [/INST]"
         )
 
-        text = completion.choices[0].message.content
+        # Using text_generation instead of chat.completions bypasses the Provider error
+        response = client.text_generation(
+            prompt,
+            max_new_tokens=120,
+            temperature=0.7,
+            details=False,
+        )
 
+        text = response
+
+        # Your existing regex logic
         hook_part = re.search(r"Hook:(.*?)Script:", text, re.S | re.I)
         script_part = re.search(r"Script:(.*)", text, re.S | re.I)
 
         hook = hook_part.group(1).strip() if hook_part else "Check this out"
-        script = script_part.group(1).strip() if script_part else "This clip surprised everyone watching."
+        script = script_part.group(1).strip() if script_part else "This clip surprised everyone."
 
-        print("✅ HF Chat Completion API called successfully")
+        print("✅ Success using Mistral v0.2 (Legacy Path)")
         return hook[:50], script[:120]
 
     except Exception as e:
