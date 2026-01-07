@@ -162,10 +162,8 @@ print("HF_TOKEN prefix:", HF_TOKEN[:6] + "..." if HF_TOKEN else "None")
 
 MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.2"
 
-# Force the client to use the official HF Serverless endpoint
 client = InferenceClient(
-    model="https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
-    api_key=HF_TOKEN,
+    api_key=HF_TOKEN  # The model is now passed in the chat call or here
 )
 
 def generate_script_hf(insta_caption):
