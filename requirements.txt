@@ -1,5 +1,4 @@
 requests
-instaloader
 huggingface_hub
 gtts
 google-api-python-client
