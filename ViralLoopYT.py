@@ -71,21 +71,25 @@ def mark_as_uploaded(reel_id: str):
 # 📥 INSTAGRAM REEL DOWNLOAD
 # =========================================================
 
+import requests
+import random
+import time
+import os
+import shutil
+import subprocess
+from datetime import datetime
+
+# Clean old files
 if os.path.exists("reels"):
     shutil.rmtree("reels")
 os.makedirs("reels", exist_ok=True)
 
-PUBLIC_PAGES = ["our.littlejoys"]
+PUBLIC_PAGES = ["titikshaa.singh"]
 
-L = instaloader.Instaloader(
-    download_pictures=False,
-    download_video_thumbnails=False,
-    save_metadata=False,
-    compress_json=False
-)
-
+APIFY_TOKEN = "apify_api_NDaycS1LGgFIWEvRKvqZc0JpRZAFgk4o3XES"  # ⚠️ Replace with your token
 
 def get_video_duration(video_path):
+    """Extract video duration using ffprobe"""
     cmd = [
         "ffprobe", "-v", "error",
         "-show_entries", "format=duration",
@@ -95,56 +99,129 @@ def get_video_duration(video_path):
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return float(result.stdout.decode().strip())
 
+def is_already_uploaded(shortcode):
+    """Check if reel was already uploaded (integrate with your Redis)"""
+    # TODO: Replace with your actual Redis check
+    # Example: return redis_client.exists(f"uploaded:{shortcode}")
+    return False
+
+def mark_as_uploaded(shortcode):
+    """Mark reel as uploaded in Redis"""
+    # TODO: Replace with your actual Redis save
+    # Example: redis_client.set(f"uploaded:{shortcode}", 1)
+    pass
+
+def fetch_reels_from_apify(username):
+    """Fetch reels from Instagram using Apify API"""
+    url = "https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items"
+    
+    payload = {
+        "directUrls": [f"https://www.instagram.com/{username}/"],
+        "resultsType": "posts",
+        "resultsLimit": 20,  # Fetch more to have a pool
+        "searchType": "hashtag",
+        "searchLimit": 1
+    }
+    
+    params = {"token": APIFY_TOKEN}
+    
+    print(f"📡 Fetching reels from @{username} via Apify...")
+    
+    response = requests.post(url, json=payload, params=params, timeout=120)
+    
+    if response.status_code != 201:
+        raise Exception(f"Apify API error: {response.status_code} - {response.text}")
+    
+    data = response.json()
+    
+    # Filter only video posts
+    video_posts = [item for item in data if item.get("type") == "Video"]
+    
+    print(f"✅ Found {len(video_posts)} video posts")
+    return video_posts
+
+def download_video(video_url, output_path):
+    """Download video file from URL"""
+    print(f"⬇️ Downloading video...")
+    response = requests.get(video_url, stream=True, timeout=60)
+    response.raise_for_status()
+    
+    with open(output_path, 'wb') as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            f.write(chunk)
+    
+    print(f"✅ Video downloaded: {output_path}")
 
 def download_one_reel():
+    """Main function matching your original logic"""
+    
+    # 1️⃣ Select random page
     page = random.choice(PUBLIC_PAGES)
-    print("Selected page:", page)
-
-    profile = instaloader.Profile.from_username(L.context, page)
-
-    video_posts = []
-    for post in profile.get_posts():
-        if post.is_video:
-            video_posts.append(post)
-        if len(video_posts) >= 15:
-            break
-
+    print("🎯 Selected page:", page)
+    
+    # 2️⃣ Fetch video posts from Apify
+    video_posts = fetch_reels_from_apify(page)
+    
+    if not video_posts:
+        raise Exception("❌ No video posts found")
+    
+    # 3️⃣ Shuffle pool to randomize attempts
     random.shuffle(video_posts)
-
+    
     selected_post = None
+    
+    # 4️⃣ Find first non-uploaded reel
     for post in video_posts:
-        if not is_already_uploaded(post.shortcode):
+        shortcode = post.get("shortCode")
+        if not is_already_uploaded(shortcode):
             selected_post = post
             break
-
+        else:
+            print(f"⏭️ Skipping already uploaded reel: {shortcode}")
+    
+    # 5️⃣ If ALL reels are already uploaded
     if not selected_post:
-        raise Exception("❌ All reels already uploaded")
-
-    L.download_post(selected_post, target="reels")
-    time.sleep(8)
-
+        raise Exception("❌ All reels in this page are already uploaded")
+    
+    print("🎬 Selected NEW reel:", selected_post.get("shortCode"))
+    
+    # 6️⃣ Download the selected reel
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    video_path = None
-
-    for f in os.listdir("reels"):
-        old = os.path.join("reels", f)
-        if f.endswith(".mp4"):
-            video_path = os.path.join("reels", f"reel_{timestamp}.mp4")
-            os.rename(old, video_path)
-        elif f.endswith(".txt"):
-            os.rename(old, os.path.join("reels", f"caption_{timestamp}.txt"))
-
-    if not video_path:
-        raise Exception("Downloaded video not found")
-
-    mark_as_uploaded(selected_post.shortcode)
+    video_path = os.path.join("reels", f"reel_{timestamp}.mp4")
+    caption_path = os.path.join("reels", f"caption_{timestamp}.txt")
+    
+    video_url = selected_post.get("videoUrl")
+    if not video_url:
+        raise Exception("❌ Video URL not found in post data")
+    
+    download_video(video_url, video_path)
+    time.sleep(2)
+    
+    # 7️⃣ Save caption
+    caption = selected_post.get("caption", "")
+    with open(caption_path, 'w', encoding='utf-8') as f:
+        f.write(caption)
+    print(f"✅ Caption saved as: caption_{timestamp}.txt")
+    
+    # 8️⃣ Mark reel as uploaded in Redis
+    mark_as_uploaded(selected_post.get("shortCode"))
+    print("🧠 Saved reel ID to Redis:", selected_post.get("shortCode"))
+    
+    # 9️⃣ Get video duration
     duration = get_video_duration(video_path)
-
+    
     return video_path, page, duration
 
 
-VIDEO_FILE, SOURCE_PAGE, DURATION = download_one_reel()
-print("Downloaded:", VIDEO_FILE, "Duration:", DURATION)
+# ========== MAIN EXECUTION ==========
+if __name__ == "__main__":
+    VIDEO_FILE, SOURCE_PAGE, DURATION = download_one_reel()
+    
+    print("\n" + "="*50)
+    print("✅ Downloaded ONE video:", VIDEO_FILE)
+    print(f"📊 Reel duration: {DURATION:.2f} seconds")
+    print(f"📍 Source page: @{SOURCE_PAGE}")
+    print("="*50)
 
 import os
 
@@ -159,45 +236,52 @@ print("HF_TOKEN prefix:", HF_TOKEN[:6] + "..." if HF_TOKEN else "None")
 # =========================================================
 # 🤖 HUGGINGFACE SCRIPT GENERATION
 # =========================================================
+import re
+from huggingface_hub import InferenceClient
 
-MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.3"
+# FREE MODEL - No restrictions
+MODEL_ID = "meta-llama/Llama-3.2-3B-Instruct"  # OR
+# MODEL_ID = "google/gemma-2-2b-it"  # OR
+# MODEL_ID = "Qwen/Qwen2.5-3B-Instruct"
 
-# Initialize the client with the model
-client = InferenceClient(model=MODEL_ID, api_key=HF_TOKEN)
+client = InferenceClient(
+    model=MODEL_ID,
+    api_key=HF_TOKEN,  # Still need a free HF token
+)
 
 def generate_script_hf(insta_caption):
     try:
-        # Mistral v0.2 requires this specific prompt format to work correctly
-        prompt = (
-            f"<s>[INST] Create a viral video hook and short spoken script.\n\n"
-            f"Instagram caption: \"{insta_caption}\"\n\n"
-            "Rules:\n"
-            "- Hook: max 6 words\n"
-            "- Script: max 30 words\n"
-            "- No emojis, no hashtags\n"
-            "Return ONLY in this format:\n"
-            "Hook: ...\n"
-            "Script: ... [/INST]"
-        )
-
-        # Using text_generation instead of chat.completions bypasses the Provider error
-        response = client.text_generation(
-            prompt,
-            max_new_tokens=120,
+        completion = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        "Create a viral video hook and short spoken script.\n\n"
+                        f"Instagram caption:\n\"{insta_caption}\"\n\n"
+                        "Rules:\n"
+                        "- Hook: max 6 words\n"
+                        "- Script: max 30 words\n"
+                        "- Simple spoken English\n"
+                        "- No emojis, no hashtags, no brand promotions\n\n"
+                        "Return ONLY in this format:\n"
+                        "Hook: ...\n"
+                        "Script: ..."
+                    )
+                }
+            ],
+            max_tokens=120,
             temperature=0.7,
-            details=False,
         )
 
-        text = response
+        text = completion.choices[0].message.content
 
-        # Your existing regex logic
         hook_part = re.search(r"Hook:(.*?)Script:", text, re.S | re.I)
         script_part = re.search(r"Script:(.*)", text, re.S | re.I)
 
         hook = hook_part.group(1).strip() if hook_part else "Check this out"
-        script = script_part.group(1).strip() if script_part else "This clip surprised everyone."
+        script = script_part.group(1).strip() if script_part else "This clip surprised everyone watching."
 
-        print("✅ Success using Mistral v0.2 (Legacy Path)")
+        print("✅ HF Chat Completion API called successfully")
         return hook[:50], script[:120]
 
     except Exception as e:
