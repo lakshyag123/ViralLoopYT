@@ -25,7 +25,7 @@ REDIS_URL = os.getenv("UPSTASH_REDIS_REST_URL")
 REDIS_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN")
 HF_TOKEN = os.getenv("HF_TOKEN")
 YT_CLIENT_SECRET = os.getenv("YT_CLIENT_SECRET")
-YT_TOKEN = os.getenv("YT_TOKEN")
+YT_TOKEN = os.getenv("TOKEN_MIDNIGHTMOTIVATION")
 APIFY_TOKEN = os.getenv("APIFY_TOKEN")
 
 print("REDIS_URL:", bool(REDIS_URL))
@@ -60,7 +60,7 @@ def mark_as_uploaded(reel_id: str):
 # 📥 APIFY INSTAGRAM REELS
 # =========================================================
 
-PUBLIC_PAGES = ["shop.withsania01"]
+PUBLIC_PAGES = ["3am_dreamers"]
 
 def fetch_reels_from_apify(username):
     url = "https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items"
@@ -208,20 +208,45 @@ gTTS(text=SCRIPT, lang="en").save("voice.mp3")
 
 FINAL_VIDEO = os.path.abspath("final_short.mp4")
 
-subprocess.run([
-    "ffmpeg", "-y",
-    "-i", VIDEO_FILE,
-    "-i", "voice.mp3",
-    "-filter_complex",
-    "[0:a]volume=0.3[a_orig];"
-    "[1:a]volume=2.0[a_voice];"
-    "[a_orig][a_voice]amix=inputs=2:duration=first[outa]",
-    "-map", "0:v",
-    "-map", "[outa]",
-    "-c:v", "libx264",
-    "-preset", "ultrafast",
-    FINAL_VIDEO
-], check=True)
+# =========================================================
+# ⚙️ CONFIGURATION SET MERGE VOICE FLAG
+# =========================================================
+MERGE_VOICE = False  # Set to True to include AI voice, False for original audio only
+
+# ... (keep your existing download and script generation code)
+
+if MERGE_VOICE:
+    print("🎙️ Voice script:", SCRIPT)
+    gTTS(text=SCRIPT, lang="en").save("voice.mp3")
+    
+    # FFmpeg command for mixing audio
+    ffmpeg_cmd = [
+        "ffmpeg", "-y",
+        "-i", VIDEO_FILE,
+        "-i", "voice.mp3",
+        "-filter_complex", "[0:a]volume=0.3[a_orig];[1:a]volume=2.0[a_voice];[a_orig][a_voice]amix=inputs=2:duration=first[outa]",
+        "-map", "0:v",
+        "-map", "[outa]",
+        "-c:v", "libx264",
+        "-preset", "ultrafast",
+        FINAL_VIDEO
+    ]
+else:
+    print("🔇 Skipping voice merge, using original audio.")
+    # FFmpeg command for original video/audio only
+    ffmpeg_cmd = [
+        "ffmpeg", "-y",
+        "-i", VIDEO_FILE,
+        "-map", "0:v",
+        "-map", "0:a",
+        "-c:v", "libx264",
+        "-c:a", "copy",
+        "-preset", "ultrafast",
+        FINAL_VIDEO
+    ]
+
+subprocess.run(ffmpeg_cmd, check=True)
+
 
 if not os.path.exists(FINAL_VIDEO):
     raise RuntimeError("❌ final_short.mp4 was not created")
