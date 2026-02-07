@@ -121,23 +121,102 @@ def download_one_reel():
 
 client = InferenceClient(model="meta-llama/Llama-3.2-3B-Instruct", api_key=HF_TOKEN)
 
-def generate_script_hf(caption):
-    completion = client.chat.completions.create(
-        messages=[{"role": "user", "content": caption}],
-        max_tokens=120,
-        temperature=0.7
+def generate_script_hf(insta_caption):
+    try:
+        completion = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        "Create a viral video hook and short spoken script.\n\n"
+                        f"Instagram caption:\n\"{insta_caption}\"\n\n"
+                        "Rules:\n"
+                        "- Hook: max 6 words\n"
+                        "- Script: max 30 words\n"
+                        "- Simple spoken English\n"
+                        "- No emojis, no hashtags, no brand promotions\n\n"
+                        "Return ONLY in this format:\n"
+                        "Hook: ...\n"
+                        "Script: ..."
+                    )
+                }
+            ],
+            max_tokens=120,
+            temperature=0.7,
+        )
+
+        text = completion.choices[0].message.content
+
+        hook_part = re.search(r"Hook:(.*?)Script:", text, re.S | re.I)
+        script_part = re.search(r"Script:(.*)", text, re.S | re.I)
+
+        hook = hook_part.group(1).strip() if hook_part else "Check this out"
+        script = script_part.group(1).strip() if script_part else "This clip surprised everyone watching."
+
+        print("✅ HF Chat Completion API called successfully")
+        return hook[:50], script[:120]
+
+    except Exception as e:
+        print(f"⚠️ HF API error: {e}")
+        return "Check this out", "This clip surprised everyone watching."
+
+def default_metadata():
+    return (
+        "Viral Video #shorts",
+        "Watch till the end! #shorts",
+        ["shorts", "viral"]
     )
-    text = completion.choices[0].message.content
-    return text[:120]
+
 
 def generate_metadata_hf(insta_caption):
-    completion = client.chat.completions.create(
-        messages=[{"role": "user", "content": f"Create YouTube Shorts title, description and tags for:\n{insta_caption}"}],
-        max_tokens=200,
-        temperature=0.8
-    )
-    text = completion.choices[0].message.content
-    return "Viral Video #shorts", "Watch till the end! #shorts", ["shorts", "viral"]
+    try:
+        completion = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Return ONLY in this format:\n"
+                        "Title: ...\n"
+                        "Description: ...\n"
+                        "Tags: ..."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        "Create YouTube Shorts metadata.\n\n"
+                        f"Instagram caption:\n\"{insta_caption}\"\n\n"
+                        "Rules:\n"
+                        "- Title < 60 characters and include #shorts\n"
+                        "- Description: detailed description with trending and latest viral hashtags\n"
+                        "- Tags: comma separated, max 10\n"
+                        "- No emojis"
+                    )
+                }
+            ],
+            max_tokens=300,
+            temperature=0.9,
+        )
+
+        text = completion.choices[0].message.content
+
+        # 🔎 Regex parsing (same logic as your original)
+        title_match = re.search(r"Title:(.*?)Description:", text, re.S | re.I)
+        desc_match = re.search(r"Description:(.*?)Tags:", text, re.S | re.I)
+        tags_match = re.search(r"Tags:(.*)", text, re.S | re.I)
+
+        title = title_match.group(1).strip() if title_match else "Viral Video #shorts"
+        description = desc_match.group(1).strip() if desc_match else "Check this out! #shorts"
+        tags_raw = tags_match.group(1).strip() if tags_match else "shorts,viral"
+
+        tags = [t.strip() for t in tags_raw.split(",") if t.strip()][:10]
+
+        print("✅ HF Metadata API called successfully")
+        return title[:60], description[:200], tags
+
+    except Exception as e:
+        print(f"⚠️ HF Metadata Error: {e}")
+        return default_metadata()
 
 # =========================================================
 # 🎬 MERGE VIDEO + VOICE
