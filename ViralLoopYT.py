@@ -35,7 +35,6 @@ print("YT_CLIENT_SECRET:", bool(YT_CLIENT_SECRET))
 print("YT_TOKEN:", bool(YT_TOKEN))
 print("APIFY_TOKEN:", bool(APIFY_TOKEN))
 
-
 if not all([REDIS_URL, REDIS_TOKEN, HF_TOKEN, YT_CLIENT_SECRET, YT_TOKEN, APIFY_TOKEN]):
     raise RuntimeError("❌ One or more required environment variables are missing")
 
@@ -124,23 +123,21 @@ client = InferenceClient(model="meta-llama/Llama-3.2-3B-Instruct", api_key=HF_TO
 def generate_script_hf(insta_caption):
     try:
         completion = client.chat.completions.create(
-            messages=[
-                {
-                    "role": "user",
-                    "content": (
-                        "Create a viral video hook and short spoken script.\n\n"
-                        f"Instagram caption:\n\"{insta_caption}\"\n\n"
-                        "Rules:\n"
-                        "- Hook: max 6 words\n"
-                        "- Script: max 30 words\n"
-                        "- Simple spoken English\n"
-                        "- No emojis, no hashtags, no brand promotions\n\n"
-                        "Return ONLY in this format:\n"
-                        "Hook: ...\n"
-                        "Script: ..."
-                    )
-                }
-            ],
+            messages=[{
+                "role": "user",
+                "content": (
+                    "Create a viral video hook and short spoken script.\n\n"
+                    f"Instagram caption:\n\"{insta_caption}\"\n\n"
+                    "Rules:\n"
+                    "- Hook: max 6 words\n"
+                    "- Script: max 30 words\n"
+                    "- Simple spoken English\n"
+                    "- No emojis, no hashtags, no brand promotions\n\n"
+                    "Return ONLY in this format:\n"
+                    "Hook: ...\n"
+                    "Script: ..."
+                )
+            }],
             max_tokens=120,
             temperature=0.7,
         )
@@ -161,38 +158,14 @@ def generate_script_hf(insta_caption):
         return "Check this out", "This clip surprised everyone watching."
 
 def default_metadata():
-    return (
-        "Viral Video #shorts",
-        "Watch till the end! #shorts",
-        ["shorts", "viral"]
-    )
-
+    return ("Viral Video #shorts", "Watch till the end! #shorts", ["shorts", "viral"])
 
 def generate_metadata_hf(insta_caption):
     try:
         completion = client.chat.completions.create(
             messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "Return ONLY in this format:\n"
-                        "Title: ...\n"
-                        "Description: ...\n"
-                        "Tags: ..."
-                    )
-                },
-                {
-                    "role": "user",
-                    "content": (
-                        "Create YouTube Shorts metadata.\n\n"
-                        f"Instagram caption:\n\"{insta_caption}\"\n\n"
-                        "Rules:\n"
-                        "- Title < 60 characters and include #shorts\n"
-                        "- Description: detailed description with trending and latest viral hashtags\n"
-                        "- Tags: comma separated, max 10\n"
-                        "- No emojis"
-                    )
-                }
+                {"role": "system", "content": "Return ONLY in this format:\nTitle: ...\nDescription: ...\nTags: ..."},
+                {"role": "user", "content": f"Create YouTube Shorts metadata for:\n{insta_caption}"}
             ],
             max_tokens=300,
             temperature=0.9,
@@ -200,13 +173,12 @@ def generate_metadata_hf(insta_caption):
 
         text = completion.choices[0].message.content
 
-        # 🔎 Regex parsing (same logic as your original)
         title_match = re.search(r"Title:(.*?)Description:", text, re.S | re.I)
         desc_match = re.search(r"Description:(.*?)Tags:", text, re.S | re.I)
         tags_match = re.search(r"Tags:(.*)", text, re.S | re.I)
 
         title = title_match.group(1).strip() if title_match else "Viral Video #shorts"
-        description = desc_match.group(1).strip() if desc_match else "Check this out! #shorts"
+        description = desc_match.group(1).strip() if desc_match else "Watch till the end! #shorts"
         tags_raw = tags_match.group(1).strip() if tags_match else "shorts,viral"
 
         tags = [t.strip() for t in tags_raw.split(",") if t.strip()][:10]
@@ -227,7 +199,11 @@ VIDEO_FILE, CAPTION_FILE, SOURCE_PAGE, DURATION = download_one_reel()
 with open(CAPTION_FILE, "r", encoding="utf-8") as f:
     ACTUAL_CAPTION = f.read().strip() or "Amazing moment"
 
-SCRIPT = generate_script_hf(ACTUAL_CAPTION)
+HOOK, SCRIPT = generate_script_hf(ACTUAL_CAPTION)
+SCRIPT = str(SCRIPT).strip()
+
+print("🎙️ Voice script:", SCRIPT)
+
 gTTS(text=SCRIPT, lang="en").save("voice.mp3")
 
 FINAL_VIDEO = os.path.abspath("final_short.mp4")
