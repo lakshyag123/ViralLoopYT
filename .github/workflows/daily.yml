@@ -33,4 +33,5 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_TOKEN: ${{ secrets.YT_TOKEN }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
         run: python ViralLoopYT.py
