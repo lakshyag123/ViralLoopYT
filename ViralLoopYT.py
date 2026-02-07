@@ -60,7 +60,7 @@ def mark_as_uploaded(reel_id: str):
 # 📥 APIFY INSTAGRAM REELS
 # =========================================================
 
-PUBLIC_PAGES = ["titikshaa.singh"]
+PUBLIC_PAGES = ["shop.withsania01"]
 
 def fetch_reels_from_apify(username):
     url = "https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items"
