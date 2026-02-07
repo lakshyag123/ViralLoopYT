@@ -3,6 +3,8 @@ name: ViralLoopYT Daily Job
 on:
   schedule:
     - cron: '30 3 * * *'   # 9:00 AM IST
+    - cron: '30 9 * * *'    # 03:00 PM IST
+    - cron: '30 15 * * *'   # 09:00 PM IST
   workflow_dispatch:
 
 jobs:
