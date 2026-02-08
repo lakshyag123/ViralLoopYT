@@ -68,11 +68,19 @@ def fetch_reels_from_apify(username):
     payload = {
         "directUrls": [f"https://www.instagram.com/{username}/"],
         "resultsType": "posts",
-        "resultsLimit": 20
+        "resultsLimit": 50   # 🔥 more candidates
     }
     response = requests.post(url, json=payload, params={"token": APIFY_TOKEN}, timeout=120)
     response.raise_for_status()
     return [item for item in response.json() if item.get("type") == "Video"]
+
+def get_view_count(post):
+    return (
+        post.get("videoViewCount")
+        or post.get("playCount")
+        or post.get("viewCount")
+        or 0
+    )
 
 def download_video(url, out):
     r = requests.get(url, stream=True, timeout=60)
@@ -98,7 +106,19 @@ def download_one_reel():
     posts = fetch_reels_from_apify(page)
     random.shuffle(posts)
 
-    post = next(p for p in posts if not is_already_uploaded(p["shortCode"]))
+    eligible_posts = [
+    p for p in posts
+    if not is_already_uploaded(p["shortCode"])
+    and get_view_count(p) > 25_000
+    ]
+    
+    if not eligible_posts:
+        raise RuntimeError("❌ No new reels found with >10k views. Try again later.")
+    
+    post = random.choice(eligible_posts)
+    
+    print("📊 Picked reel with views:", get_view_count(post))
+
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     video_path = f"reels/reel_{ts}.mp4"
