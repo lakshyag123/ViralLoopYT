@@ -60,7 +60,7 @@ def mark_as_uploaded(reel_id: str):
 # 📥 APIFY INSTAGRAM REELS
 # =========================================================
 
-PUBLIC_PAGES = ["onepercentace"]
+PUBLIC_PAGES = ["3am_dreamers"]
 #3am_dreamers
 
 def fetch_reels_from_apify(username):
@@ -68,7 +68,7 @@ def fetch_reels_from_apify(username):
     payload = {
         "directUrls": [f"https://www.instagram.com/{username}/"],
         "resultsType": "posts",
-        "resultsLimit": 50   # 🔥 more candidates
+        "resultsLimit": 20   # 🔥 more candidates
     }
     response = requests.post(url, json=payload, params={"token": APIFY_TOKEN}, timeout=120)
     response.raise_for_status()
@@ -109,7 +109,7 @@ def download_one_reel():
     eligible_posts = [
     p for p in posts
     if not is_already_uploaded(p["shortCode"])
-    and get_view_count(p) > 25_000
+    and get_view_count(p) > 5_000
     ]
     
     if not eligible_posts:
