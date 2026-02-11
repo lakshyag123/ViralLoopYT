@@ -37,4 +37,5 @@ jobs:
           YT_TOKEN: ${{ secrets.YT_TOKEN }}
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
           TOKEN_MIDNIGHTMOTIVATION: ${{ secrets.TOKEN_MIDNIGHTMOTIVATION }}
+          TOKEN_GOATGEARS: ${{ secrets.TOKEN_GOATGEARS }}
         run: python ViralLoopYT.py
