@@ -60,7 +60,7 @@ def mark_as_uploaded(reel_id: str):
 # 📥 APIFY INSTAGRAM REELS
 # =========================================================
 
-PUBLIC_PAGES = ["3am_dreamers"]
+PUBLIC_PAGES = ["mindset.prime7"]
 #3am_dreamers
 
 def fetch_reels_from_apify(username):
