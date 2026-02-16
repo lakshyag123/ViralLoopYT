@@ -25,7 +25,7 @@ REDIS_URL = os.getenv("UPSTASH_REDIS_REST_URL")
 REDIS_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN")
 HF_TOKEN = os.getenv("HF_TOKEN")
 YT_CLIENT_SECRET = os.getenv("YT_CLIENT_SECRET")
-YT_TOKEN = os.getenv("TOKEN_GOATGEARS")
+YT_TOKEN = os.getenv("TOKEN_VIRAT_REELS")
 APIFY_TOKEN = os.getenv("APIFY_TOKEN")
 
 print("REDIS_URL:", bool(REDIS_URL))
@@ -60,8 +60,8 @@ def mark_as_uploaded(reel_id: str):
 # 📥 APIFY INSTAGRAM REELS
 # =========================================================
 
-PUBLIC_PAGES = ["mindset.prime7"]
-#3am_dreamers
+PUBLIC_PAGES = ["cheekunowz"]
+#3am_dreamers,mindset.prime7
 
 def fetch_reels_from_apify(username):
     url = "https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items"
