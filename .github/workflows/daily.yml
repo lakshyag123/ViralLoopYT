@@ -38,4 +38,5 @@ jobs:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
           TOKEN_MIDNIGHTMOTIVATION: ${{ secrets.TOKEN_MIDNIGHTMOTIVATION }}
           TOKEN_GOATGEARS: ${{ secrets.TOKEN_GOATGEARS }}
+          TOKEN_VIRAT_REELS: ${{secrets.TOKEN_VIRAT_REELS}}
         run: python ViralLoopYT.py
