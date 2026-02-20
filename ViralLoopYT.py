@@ -193,13 +193,24 @@ def generate_metadata_hf(insta_caption):
         )
 
         text = completion.choices[0].message.content
-
+        trending_tags = " #ViratKohli #RCB #Virushka"
         title_match = re.search(r"Title:(.*?)Description:", text, re.S | re.I)
         desc_match = re.search(r"Description:(.*?)Tags:", text, re.S | re.I)
         tags_match = re.search(r"Tags:(.*)", text, re.S | re.I)
 
-        title = title_match.group(1).strip() if title_match else "Viral Video #shorts"
-        description = desc_match.group(1).strip() if desc_match else "Watch till the end! #shorts"
+        # Extract the text first, then append tags
+        base_title = title_match.group(1).strip() if title_match else "Viral Video"
+        title = f"{base_title[:40]} #ViratKohli #RCB #Virushka #shorts"
+
+        # 1. Extract base description
+        base_desc = desc_match.group(1).strip() if desc_match else "Watch till the end! #shorts"
+        
+        # 2. Define your target hashtags
+        trending_desc_tags = "\n\n#ViratKohli #RCB #Virushka #Cricket #KingKohli #IPL2026"
+        
+        # 3. Combine them (Trimming base to 150 to keep the "hook" plus tags within the 200-char preview)
+        description = f"{base_desc[:150]}... {trending_desc_tags}"
+
         tags_raw = tags_match.group(1).strip() if tags_match else "shorts,viral"
 
         tags = [t.strip() for t in tags_raw.split(",") if t.strip()][:10]
