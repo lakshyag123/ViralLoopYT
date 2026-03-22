@@ -21,55 +21,44 @@ from googleapiclient.http import MediaFileUpload
 # 🔐 ENVIRONMENT VARIABLES
 # =========================================================
 
-REDIS_URL = os.getenv("UPSTASH_REDIS_REST_URL")
-REDIS_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN")
+# ❌ REDIS DISABLED
+# REDIS_URL = os.getenv("UPSTASH_REDIS_REST_URL")
+# REDIS_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN")
+
 HF_TOKEN = os.getenv("HF_TOKEN")
 YT_CLIENT_SECRET = os.getenv("YT_CLIENT_SECRET")
 YT_TOKEN = os.getenv("TOKEN_MIDNIGHTMOTIVATION")
 APIFY_TOKEN = os.getenv("APIFY_TOKEN")
 
-if not all([REDIS_URL, REDIS_TOKEN, HF_TOKEN, YT_CLIENT_SECRET, YT_TOKEN, APIFY_TOKEN]):
+if not all([HF_TOKEN, YT_CLIENT_SECRET, YT_TOKEN, APIFY_TOKEN]):
     raise RuntimeError("❌ Missing env variables")
 
 # =========================================================
-# 🧠 REDIS
+# 🧠 REDIS (DISABLED)
 # =========================================================
 
-HEADERS = {"Authorization": f"Bearer {REDIS_TOKEN}"}
-REDIS_SET_KEY = "uploaded_reels"
+# HEADERS = {"Authorization": f"Bearer {REDIS_TOKEN}"}
+# REDIS_SET_KEY = "uploaded_reels"
 
-def is_already_uploaded(reel_id: str) -> bool:
-    try:
-        reel_id = urllib.parse.quote(reel_id)
-        r = requests.get(
-            f"{REDIS_URL}/sismember/{REDIS_SET_KEY}/{reel_id}",
-            headers=HEADERS,
-            timeout=5
-        )
-        r.raise_for_status()
-        return r.json().get("result", 0) == 1
-    except Exception as e:
-        print("⚠️ Redis check failed, skipping:", e)
-        return False   # allow reel
+# def is_already_uploaded(reel_id: str) -> bool:
+#     return False
 
-
-def mark_as_uploaded(reel_id: str):
-    try:
-        reel_id = urllib.parse.quote(reel_id)
-        r = requests.post(
-            f"{REDIS_URL}/sadd/{REDIS_SET_KEY}/{reel_id}",
-            headers=HEADERS,
-            timeout=5
-        )
-        r.raise_for_status()
-    except Exception as e:
-        print("⚠️ Redis save failed:", e)
+# def mark_as_uploaded(reel_id: str):
+#     pass
 
 # =========================================================
 # 📥 APIFY INSTAGRAM REELS
 # =========================================================
 
-PUBLIC_PAGES = ["legaa.cy7","premierleague","gambo479","goalc.ulture","menacefootballhq","tintedvisor"]
+# ⚠️ FIXED VALID USERNAMES
+PUBLIC_PAGES = [
+    "433",
+    "bleacherreportfootball",
+    "espnfc",
+    "goalglobal",
+    "houseofhighlights",
+    "tintedvisor"
+]
 
 def fetch_reels_from_apify(username):
     url = "https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items"
@@ -97,33 +86,7 @@ def download_video(url, out):
 # =========================================================
 
 # def download_one_reel():
-#     """
-#     OLD LOGIC: downloads only 1 reel
-#     """
-#     if os.path.exists("reels"):
-#         shutil.rmtree("reels")
-#     os.makedirs("reels", exist_ok=True)
-#
-#     page = random.choice(PUBLIC_PAGES)
-#     posts = fetch_reels_from_apify(page)
-#     random.shuffle(posts)
-#
-#     eligible_posts = [
-#         p for p in posts
-#         if not is_already_uploaded(p["shortCode"])
-#         and get_view_count(p) > 5000
-#     ]
-#
-#     if not eligible_posts:
-#         raise RuntimeError("No reels found")
-#
-#     post = random.choice(eligible_posts)
-#
-#     video_path = "reel.mp4"
-#     download_video(post["videoUrl"], video_path)
-#
-#     mark_as_uploaded(post["shortCode"])
-#
+#     ...
 #     return video_path
 
 # =========================================================
@@ -147,31 +110,33 @@ def download_multiple_reels(n=5):
     for i, page in enumerate(selected_pages):
         print(f"🔎 Fetching from page: {page}")
 
-        posts = fetch_reels_from_apify(page)
-        random.shuffle(posts)
+        try:
+            posts = fetch_reels_from_apify(page)
+            random.shuffle(posts)
 
-        eligible_posts = [
-            p for p in posts
-            if not is_already_uploaded(p["shortCode"])
-            and get_view_count(p) > 5000
-        ]
+            eligible_posts = [
+                p for p in posts
+                if get_view_count(p) > 5000
+            ]
 
-        if not eligible_posts:
-            print(f"⚠️ No valid reels found for {page}")
-            continue
+            if not eligible_posts:
+                print(f"⚠️ No valid reels found for {page}")
+                continue
 
-        post = eligible_posts[0]  # pick 1 reel per page
+            post = eligible_posts[0]
 
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S") + f"_{i}"
-        video_path = f"reels/reel_{ts}.mp4"
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S") + f"_{i}"
+            video_path = f"reels/reel_{ts}.mp4"
 
-        download_video(post["videoUrl"], video_path)
-        mark_as_uploaded(post["shortCode"])
+            download_video(post["videoUrl"], video_path)
 
-        video_paths.append(video_path)
-        captions.append(post.get("caption", ""))
+            video_paths.append(video_path)
+            captions.append(post.get("caption", ""))
 
-        print(f"✅ Downloaded from {page}")
+            print(f"✅ Downloaded from {page}")
+
+        except Exception as e:
+            print(f"❌ Failed for {page}:", e)
 
     if len(video_paths) == 0:
         raise RuntimeError("❌ No reels downloaded from any page")
@@ -221,8 +186,58 @@ def generate_script_hf(caption):
     except:
         return "Check this out", "Amazing moment"
 
-def generate_metadata_hf(caption):
-    return ("Viral Shorts #shorts", "Watch till end! #shorts", ["shorts", "viral"])
+# ❌ OLD STATIC METADATA (COMMENTED)
+# def generate_metadata_hf(caption):
+#     return ("Viral Shorts #shorts", "Watch till end! #shorts", ["shorts", "viral"])
+
+# ✅ NEW DYNAMIC METADATA
+def generate_metadata_hf(insta_caption):
+    try:
+        completion = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Create YouTube Shorts metadata.\n"
+                        "Return format:\n"
+                        "Title: ...\n"
+                        "Description: ...\n"
+                        "Tags: ..."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": f"Caption:\n{insta_caption}"
+                }
+            ],
+            max_tokens=200,
+            temperature=0.8,
+        )
+
+        text = completion.choices[0].message.content
+
+        title_match = re.search(r"Title:(.*?)Description:", text, re.S | re.I)
+        desc_match = re.search(r"Description:(.*?)Tags:", text, re.S | re.I)
+        tags_match = re.search(r"Tags:(.*)", text, re.S | re.I)
+
+        title = title_match.group(1).strip() if title_match else "Crazy Football Moment"
+        description = desc_match.group(1).strip() if desc_match else "Watch till the end!"
+        tags_raw = tags_match.group(1).strip() if tags_match else "football,shorts"
+
+        tags = [t.strip() for t in tags_raw.split(",") if t.strip()][:10]
+
+        title = f"{title[:50]} ⚽🔥 #shorts"
+        description = f"{description[:150]}\n\n#football #shorts #viral #soccer"
+
+        return title, description, tags
+
+    except Exception as e:
+        print("⚠️ Metadata error:", e)
+        return (
+            "Crazy Football Moment ⚽ #shorts",
+            "Watch till the end! #shorts",
+            ["football", "shorts"]
+        )
 
 # =========================================================
 # 🚀 MAIN FLOW (UPDATED)
@@ -238,7 +253,8 @@ MERGED_VIDEO = merge_videos(VIDEO_FILES)
 
 VIDEO_FILE = MERGED_VIDEO
 
-ACTUAL_CAPTION = " ".join(CAPTIONS).strip() or "Amazing moments"
+# ✅ IMPROVED CAPTION USAGE
+ACTUAL_CAPTION = CAPTIONS[0] if CAPTIONS else "Amazing football moment"
 
 HOOK, SCRIPT = generate_script_hf(ACTUAL_CAPTION)
 
