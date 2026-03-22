@@ -39,15 +39,31 @@ HEADERS = {"Authorization": f"Bearer {REDIS_TOKEN}"}
 REDIS_SET_KEY = "uploaded_reels"
 
 def is_already_uploaded(reel_id: str) -> bool:
-    reel_id = urllib.parse.quote(reel_id)
-    r = requests.get(f"{REDIS_URL}/sismember/{REDIS_SET_KEY}/{reel_id}", headers=HEADERS, timeout=10)
-    r.raise_for_status()
-    return r.json().get("result", 0) == 1
+    try:
+        reel_id = urllib.parse.quote(reel_id)
+        r = requests.get(
+            f"{REDIS_URL}/sismember/{REDIS_SET_KEY}/{reel_id}",
+            headers=HEADERS,
+            timeout=5
+        )
+        r.raise_for_status()
+        return r.json().get("result", 0) == 1
+    except Exception as e:
+        print("⚠️ Redis check failed, skipping:", e)
+        return False   # allow reel
+
 
 def mark_as_uploaded(reel_id: str):
-    reel_id = urllib.parse.quote(reel_id)
-    r = requests.post(f"{REDIS_URL}/sadd/{REDIS_SET_KEY}/{reel_id}", headers=HEADERS, timeout=10)
-    r.raise_for_status()
+    try:
+        reel_id = urllib.parse.quote(reel_id)
+        r = requests.post(
+            f"{REDIS_URL}/sadd/{REDIS_SET_KEY}/{reel_id}",
+            headers=HEADERS,
+            timeout=5
+        )
+        r.raise_for_status()
+    except Exception as e:
+        print("⚠️ Redis save failed:", e)
 
 # =========================================================
 # 📥 APIFY INSTAGRAM REELS
